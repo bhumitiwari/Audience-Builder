@@ -30,6 +30,7 @@ export const AudienceForm: React.FC<AudienceFormProps> = ({
   onSubmit,
   onReset,
 }) => {
+  // Local Form State
   const [name, setName] = useState<string>('Viewed but not purchased');
   const [asOf, setAsOf] = useState<string>('2026-09-29T00:00:00.000Z');
   const [conditions, setConditions] = useState<ConditionRule[]>(INITIAL_CONDITIONS);
@@ -81,6 +82,25 @@ export const AudienceForm: React.FC<AudienceFormProps> = ({
       errors.push('At least one condition must be specified.');
     }
 
+    conditions.forEach((c, idx) => {
+      const num = idx + 1;
+      if (c.count === '' || isNaN(Number(c.count))) {
+        errors.push(`Condition ${num}: Count is required.`);
+      } else if (Number(c.count) < 0) {
+        errors.push(`Condition ${num}: Count cannot be negative.`);
+      }
+
+      if (c.withinDays === '' || isNaN(Number(c.withinDays))) {
+        errors.push(`Condition ${num}: Within (Days) is required.`);
+      } else if (Number(c.withinDays) < 1) {
+        if (Number(c.withinDays) < 0) {
+          errors.push(`Condition ${num}: Within (Days) cannot be negative. Must be at least 1 day.`);
+        } else {
+          errors.push(`Condition ${num}: Within (Days) cannot be 0. Must be at least 1 day.`);
+        }
+      }
+    });
+
     if (errors.length > 0) {
       setClientErrors(errors);
       return;
@@ -93,8 +113,8 @@ export const AudienceForm: React.FC<AudienceFormProps> = ({
       conditions: conditions.map(({ eventType, operator, count, withinDays }) => ({
         eventType,
         operator,
-        count: count === '' ? 0 : Math.max(0, Number(count)),
-        withinDays: withinDays === '' ? 1 : Math.max(1, Number(withinDays)),
+        count: Number(count),
+        withinDays: Number(withinDays),
       })),
     });
   };
@@ -156,8 +176,9 @@ export const AudienceForm: React.FC<AudienceFormProps> = ({
           />
         </div>
 
-       <div>
-          <div className="flex items-center justify-between mb-1">
+        {/* asOf Timestamp with NOW button */}
+        <div>
+          <div className="flex flex-wrap items-center justify-between gap-1.5 mb-1">
             <label htmlFor="aud-as-of" className="text-xs font-semibold text-slate-700">
               Evaluation Timestamp (<code className="font-mono text-[11px]">asOf</code>){' '}
               <span className="text-rose-500" aria-hidden="true">*</span>
@@ -232,9 +253,9 @@ export const AudienceForm: React.FC<AudienceFormProps> = ({
                 )}
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-2.5 text-xs">
                 {/* Event Type */}
-                <div>
+                <div className="col-span-2 sm:col-span-1 xl:col-span-1">
                   <label
                     htmlFor={`event-${condition.id}`}
                     className="block text-[11px] font-medium text-slate-600 mb-0.5"
@@ -260,7 +281,7 @@ export const AudienceForm: React.FC<AudienceFormProps> = ({
                 </div>
 
                 {/* Operator */}
-                <div>
+                <div className="col-span-2 sm:col-span-1 xl:col-span-1">
                   <label
                     htmlFor={`op-${condition.id}`}
                     className="block text-[11px] font-medium text-slate-600 mb-0.5"
@@ -283,7 +304,7 @@ export const AudienceForm: React.FC<AudienceFormProps> = ({
                 </div>
 
                 {/* Count */}
-                <div>
+                <div className="col-span-1 xl:col-span-1">
                   <label
                     htmlFor={`cnt-${condition.id}`}
                     className="block text-[11px] font-medium text-slate-600 mb-0.5"
@@ -293,7 +314,6 @@ export const AudienceForm: React.FC<AudienceFormProps> = ({
                   <input
                     id={`cnt-${condition.id}`}
                     type="number"
-                    min="0"
                     step="1"
                     value={condition.count}
                     onChange={(e) => {
@@ -302,17 +322,19 @@ export const AudienceForm: React.FC<AudienceFormProps> = ({
                         count: val === '' ? '' : parseInt(val, 10),
                       });
                     }}
-                    onBlur={() => {
-                      if (condition.count === '') {
-                        handleUpdateCondition(condition.id, { count: 0 });
-                      }
-                    }}
-                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
+                    className={`w-full px-2.5 py-1.5 bg-white border ${
+                      condition.count !== '' && Number(condition.count) < 0
+                        ? 'border-rose-400 focus-visible:ring-rose-500'
+                        : 'border-slate-300 focus-visible:ring-slate-900'
+                    } rounded text-slate-800 focus-visible:outline-none focus-visible:ring-2`}
                   />
+                  {condition.count !== '' && Number(condition.count) < 0 && (
+                    <p className="mt-0.5 text-[10px] text-rose-600 font-medium">Must be ≥ 0</p>
+                  )}
                 </div>
 
                 {/* Within Days */}
-                <div>
+                <div className="col-span-1 xl:col-span-1">
                   <label
                     htmlFor={`days-${condition.id}`}
                     className="block text-[11px] font-medium text-slate-600 mb-0.5"
@@ -322,7 +344,6 @@ export const AudienceForm: React.FC<AudienceFormProps> = ({
                   <input
                     id={`days-${condition.id}`}
                     type="number"
-                    min="1"
                     step="1"
                     value={condition.withinDays}
                     onChange={(e) => {
@@ -331,13 +352,17 @@ export const AudienceForm: React.FC<AudienceFormProps> = ({
                         withinDays: val === '' ? '' : parseInt(val, 10),
                       });
                     }}
-                    onBlur={() => {
-                      if (condition.withinDays === '' || Number(condition.withinDays) < 1) {
-                        handleUpdateCondition(condition.id, { withinDays: 1 });
-                      }
-                    }}
-                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
+                    className={`w-full px-2.5 py-1.5 bg-white border ${
+                      condition.withinDays !== '' && Number(condition.withinDays) < 1
+                        ? 'border-rose-400 focus-visible:ring-rose-500'
+                        : 'border-slate-300 focus-visible:ring-slate-900'
+                    } rounded text-slate-800 focus-visible:outline-none focus-visible:ring-2`}
                   />
+                  {condition.withinDays !== '' && Number(condition.withinDays) < 1 && (
+                    <p className="mt-0.5 text-[10px] text-rose-600 font-medium">
+                      {Number(condition.withinDays) < 0 ? 'Cannot be negative' : 'Must be ≥ 1'}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

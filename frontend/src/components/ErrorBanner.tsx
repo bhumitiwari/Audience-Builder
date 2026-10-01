@@ -12,7 +12,7 @@ export const ErrorBanner: React.FC<ErrorBannerProps> = ({ error, isLoading, onRe
   return (
     <div
       role="alert"
-      className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-rose-900 text-xs flex items-center justify-between gap-4"
+      className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-rose-900 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
     >
       <div>
         <strong className="font-semibold">Error:</strong> {error}
